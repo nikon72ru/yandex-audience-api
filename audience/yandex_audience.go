@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"o2o/common"
 	"os"
 	"time"
@@ -49,14 +50,37 @@ func NewClient(ctx context.Context) (*Client, error) {
 	}
 	//Creating http client
 	client.hc = &http.Client{}
-	//Set api version: now available only v2
-	client.apiVersion = "v2"
+	//Set api version: now available only v1
+	client.apiVersion = "v1"
 	return &client, nil
 }
 
 func (c *Client) Close() error {
 	c.hc = nil
 	return nil
+}
+
+func (c *Client) SegmentsList(pixel ...int) ([]Segment, error) {
+	requestPath := fmt.Sprintf("%s%s/management/segments", apiUrl, c.apiVersion)
+	if len(pixel) > 0 {
+		requestPath += fmt.Sprintf("?pixel=%d", pixel[0])
+	}
+	requestUrl, err := url.Parse(requestPath)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.hc.Do(&http.Request{
+		Method: http.MethodGet,
+		URL:    requestUrl,
+		Header: http.Header{"Authorization": {fmt.Sprintf("OAuth %s", c.token)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	dt, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(requestUrl.String())
+	fmt.Println(string(dt))
+	return nil, nil
 }
 
 func (YandexAudience) New() *YandexAudience {
