@@ -6,13 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
+	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 	"net/url"
-	"o2o/common"
 	"os"
-	"time"
 )
 
 // Errors section
@@ -24,6 +23,14 @@ var (
 const (
 	tokenVariable = "YANDEX_AUDIENCE_TOKEN"
 	apiUrl        = "https://api-audience.yandex.ru/"
+)
+
+//content_types constants
+const (
+	idfaGain = "idfa_gaid"
+	clientId = "client_id"
+	mac      = "mac"
+	crm      = "crm"
 )
 
 type Client struct {
@@ -60,7 +67,7 @@ func (c *Client) Close() error {
 	return nil
 }
 
-func (c *Client) SegmentsList(pixel ...int) ([]Segment, error) {
+func (c *Client) SegmentsList(pixel ...int) (*[]map[string]interface{}, error) {
 	requestPath := fmt.Sprintf("%s%s/management/segments", apiUrl, c.apiVersion)
 	if len(pixel) > 0 {
 		requestPath += fmt.Sprintf("?pixel=%d", pixel[0])
@@ -77,207 +84,154 @@ func (c *Client) SegmentsList(pixel ...int) ([]Segment, error) {
 	if err != nil {
 		return nil, err
 	}
-	dt, err := ioutil.ReadAll(resp.Body)
-	fmt.Println(requestUrl.String())
-	fmt.Println(string(dt))
-	return nil, nil
+	var rawMap struct {
+		Segments []map[string]interface{} `json:"segments"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&rawMap); err != nil {
+		return nil, err
+	}
+	//TODO: Apply a method to separate segments by type and break them into structures
+	//Problem: Problem: Different formats returns as one array. Bad fields-description in API documentation
+	return &rawMap.Segments, nil
 }
 
-func (YandexAudience) New() *YandexAudience {
-	ya := YandexAudience{}
-	ya.token = os.Getenv("yandex_audience_token")
-	return &ya
-}
-
-func (ya *YandexAudience) UploadMacs(reportname, fileName string) (id int64, err error) {
-	body, statusCode, err := common.UploadFile("https://api-audience.yandex.ru/v1/management/segments/upload_csv_file?",
-		fileName, map[string]string{"Authorization": fmt.Sprintf("Bearer %s", ya.token)})
-
-	if err != nil {
-		err = errors.New(fmt.Sprintf("file upload error: %s", err.Error()))
-		return
+func (c *Client) CreateSegmentFromFile(name, filename, contentType string) (*UploadingSegment, error) {
+	var f *os.File
+	var err error
+	if f, err = os.Open(filename); err != nil {
+		return nil, err
 	}
-	if statusCode != http.StatusOK {
-		err = errors.New(fmt.Sprintf("bad status: %d, body: %s", statusCode, string(body)))
-		return
-	}
-	response := struct {
-		Segment struct {
-			Id          int64  `json:"id"`
-			Name        string `json:"name"`
-			Hashed      bool   `json:"hashed"`
-			ContentType string `json:"content_type"`
-		} `json:"segment"`
-	}{}
-
-	err = json.Unmarshal(body, &response)
-
-	if err != nil {
-		return
-	}
-
-	response.Segment.Name = reportname
-	response.Segment.ContentType = "mac"
-	q, err := json.Marshal(response)
-	if err != nil {
-		return
-	}
-	//Сохраняем загруженый сегмент
-	req, err := http.NewRequest("POST", fmt.Sprintf("https://api-audience.yandex.ru/v1/management/segment/%d/confirm?", response.Segment.Id), bytes.NewBuffer(q))
-	if err != nil {
-		return
-	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ya.token))
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		return
-	}
-	defer res.Body.Close()
-	// Check the response
-	if res.StatusCode != http.StatusOK {
-		reqBody, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			logrus.Warnf("can't parse unknown error yandex audience %s because %s", string(reqBody), err.Error())
-			err = errors.New("внутренняя ошибка")
-			return 0, err
-		}
-		var errResp struct {
-			Errors  interface{} `json:"errors"`
-			Code    int         `json:"code"`
-			Message string      `json:"message"`
-		}
-		err = json.Unmarshal(reqBody, &errResp)
-		if err != nil {
-			logrus.Warnf("can't parse unknown error yandex audience %s because %s", string(reqBody), err.Error())
-			err = errors.New("внутренняя ошибка")
-			return 0, err
-		}
-		err = errors.New(errResp.Message)
-		return 0, err
-	}
-	return response.Segment.Id, err
-}
-
-func (ya *YandexAudience) AppendUser(id int64, email string) (err error) {
-	//Выдадим права
-	type permission struct {
-		Grant struct {
-			UserLogin string    `json:"user_login"`
-			CreatedAt time.Time `json:"created_at"`
-			Comment   string    `json:"comment"`
-		} `json:"grant"`
-	}
-	var perm permission
-	perm.Grant.UserLogin = email
-	perm.Grant.CreatedAt = time.Now()
-	q, err := json.Marshal(perm)
-	if err != nil {
-		return
-	}
-	req, err := http.NewRequest("PUT", fmt.Sprintf("https://api-audience.yandex.ru/v1/management/segment/%d/grant?", id), bytes.NewBuffer(q))
-	if err != nil {
-		return
-	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ya.token))
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		return
-	}
-	defer res.Body.Close()
-	// Check the response
-	if res.StatusCode != http.StatusOK {
-		type YandexError struct {
-			Errors []struct {
-				ErrorType string `json:"error_type"`
-				Message   string `json:"message"`
-				Location  string `json:"location"`
-			} `json:"errors"`
-		}
-		var errResponse YandexError
-		reqBody, _ := ioutil.ReadAll(res.Body)
-		err = json.Unmarshal(reqBody, &errResponse)
-		if err != nil {
+	rp, wp := io.Pipe()
+	mpw := multipart.NewWriter(wp)
+	errorChan := make(chan error, 1)
+	go func() {
+		var part io.Writer
+		var err error
+		defer wp.Close()
+		defer f.Close()
+		if part, err = mpw.CreateFormField("key"); err != nil {
 			return
 		}
-		if len(errResponse.Errors) > 0 {
-			err = errors.New(errResponse.Errors[0].Message)
-		} else {
-			err = errors.New(fmt.Sprintf("bad status: %s, body: %s", res.Status, string(reqBody)))
+		if _, err = part.Write([]byte("KEY")); err != nil {
+			return
 		}
-		return
+
+		if part, err = mpw.CreateFormFile("file", filename); err != nil {
+			errorChan <- err
+			return
+		}
+		if _, err = io.Copy(part, f); err != nil {
+			errorChan <- err
+		}
+		if err = mpw.Close(); err != nil {
+			errorChan <- err
+		}
+		errorChan <- nil
+	}()
+	requestUrl, err := url.Parse(fmt.Sprintf("%s%s/management/segments/upload_file", apiUrl, c.apiVersion))
+	if err != nil {
+		return nil, err
 	}
-	return
+	resp, err := c.hc.Do(&http.Request{
+		Method: http.MethodPost,
+		URL:    requestUrl,
+		Header: http.Header{
+			"Authorization": {fmt.Sprintf("OAuth %s", c.token)},
+			"Content-Type":  {mpw.FormDataContentType()},
+		},
+		Body: rp,
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if err := <-errorChan; err != nil {
+		return nil, err
+	}
+	var respStruct struct {
+		Segment UploadingSegment `json:"segment"`
+		ApiError
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&respStruct); err != nil {
+		return nil, err
+	}
+	if respStruct.Segment.Id != 0 {
+		respStruct.Segment.Name = name
+		respStruct.Segment.ContentType = contentType
+		return &respStruct.Segment, nil
+	} else if len(respStruct.Errors) != 0 {
+		return nil, respStruct.Error()
+	} else {
+		return nil, errors.New("unexpected answer format")
+	}
 }
 
-func (ya *YandexAudience) RemoveSegment(id int64) (success bool, err error) {
-	request, err := http.NewRequest("DELETE", fmt.Sprintf("https://api-audience.yandex.ru/v1/management/segment/%d", id), nil)
+func (c *Client) SaveUploadedSegment(segment *UploadingSegment) error {
+	requestUrl, err := url.Parse(fmt.Sprintf("%s%s/management/segment/%d/confirm?", apiUrl, c.apiVersion, segment.Id))
 	if err != nil {
-		return
+		return err
 	}
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ya.token))
-	client := &http.Client{}
-	res, err := client.Do(request)
+	jsonBody, err := json.Marshal(struct {
+		Segment *UploadingSegment `json:"segment"`
+	}{segment})
 	if err != nil {
-		return
+		return err
 	}
-	defer res.Body.Close()
-	var response struct {
+	resp, err := c.hc.Do(&http.Request{
+		Method: http.MethodPost,
+		URL:    requestUrl,
+		Header: http.Header{
+			"Authorization": {fmt.Sprintf("OAuth %s", c.token)},
+		},
+		Body: ioutil.NopCloser(bytes.NewBuffer(jsonBody)),
+	})
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	var respStruct struct {
+		Segment UploadingSegment `json:"segment"`
+		ApiError
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&respStruct); err != nil {
+		return err
+	}
+	if respStruct.Segment.Id != 0 {
+		segment = &respStruct.Segment
+		return nil
+	} else if len(respStruct.Errors) != 0 {
+		return respStruct.Error()
+	} else {
+		return errors.New("unexpected answer format")
+	}
+}
+
+func (c *Client) RemoveSegment(id int64) (bool, error) {
+	requestUrl, err := url.Parse(fmt.Sprintf("%s%s/management/segment/%d", apiUrl, c.apiVersion, id))
+	if err != nil {
+		return false, err
+	}
+	resp, err := c.hc.Do(&http.Request{
+		Method: http.MethodDelete,
+		URL:    requestUrl,
+		Header: http.Header{
+			"Authorization": {fmt.Sprintf("OAuth %s", c.token)},
+		},
+	})
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+	var respStruct struct {
 		Success bool `json:"success"`
+		ApiError
 	}
-
-	resBody, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return
+	if err := json.NewDecoder(resp.Body).Decode(&respStruct); err != nil {
+		return false, err
 	}
-	err = json.Unmarshal(resBody, &response)
-	if err != nil {
-		return
+	if len(respStruct.Errors) != 0 {
+		return false, respStruct.Error()
+	} else {
+		return true, nil
 	}
-	success = response.Success
-	return
-}
-
-type YandexSegment struct {
-	Id              int       `json:"id"`
-	Name            string    `json:"name"`
-	Status          string    `json:"status"`
-	CreateTime      time.Time `json:"create_time"`
-	MatchedQuantity int       `json:"matched_quantity"`
-}
-
-type yandexAudienceType struct {
-	Segments []YandexSegment `json:"segments"`
-}
-
-func (ya *YandexAudience) GetUploads() (uploads []YandexSegment, err error) {
-	request, err := http.NewRequest("GET", "https://api-audience.yandex.ru/v1/management/segments?", nil)
-	if err != nil {
-		return
-	}
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ya.token))
-	client := &http.Client{}
-	res, err := client.Do(request)
-	if err != nil {
-		return
-	}
-	defer res.Body.Close()
-
-	var segments yandexAudienceType
-
-	resBody, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return
-	}
-	err = json.Unmarshal(resBody, &segments)
-	if err != nil {
-		return
-	}
-	uploads = segments.Segments
-	return
 }

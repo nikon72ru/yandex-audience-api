@@ -1,6 +1,11 @@
 package audience
 
-import "time"
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"time"
+)
 
 type BaseSegment struct {
 	Id         int64     `json:"id"`
@@ -60,10 +65,10 @@ type UploadingSegment struct {
 
 type LookalikeSegment struct {
 	BaseSegment
-	LookalikeLink              int  `json:"lookalike_link"`
-	LookalikeValue             int  `json:"lookalike_value"`
-	MaintainDeviceDistribution bool `json:"maintain_device_distribution"`
-	MaintainGeoDistribution    bool `json:"maintain_geo_distribution"`
+	LookalikeLink              int64 `json:"lookalike_link"`
+	LookalikeValue             int64 `json:"lookalike_value"`
+	MaintainDeviceDistribution bool  `json:"maintain_device_distribution"`
+	MaintainGeoDistribution    bool  `json:"maintain_geo_distribution"`
 }
 
 type MetrikaSegment struct {
@@ -72,4 +77,30 @@ type MetrikaSegment struct {
 	MetrikaSegmentId   int    `json:"metrika_segment_id"`
 }
 
-type Segment interface{}
+type Segments struct {
+	MetrikaSegments    []MetrikaSegment
+	LookalikeSegments  []LookalikeSegment
+	UploadingSegments  []UploadingSegment
+	CircleGeoSegments  []CircleGeoSegment
+	AppMetricaSegments []AppMetricaSegment
+	PolygonGeoSegments []PolygonGeoSegment
+	PixelSegments      []PixelSegment
+	UnknownSegmtns     []BaseSegment
+}
+
+type Error struct {
+	ErrorType string `json:"error_type"`
+	Message   string `json:"message"`
+	Location  string `json:"location"`
+}
+
+type ApiError struct {
+	Errors  []Error `json:"errors"`
+	Code    int     `json:"code"`
+	Message string  `json:"message"`
+}
+
+func (e *ApiError) Error() error {
+	err, _ := json.Marshal(e.Errors)
+	return errors.New(fmt.Sprintf("%d: %s ([%s])", e.Code, e.Message, err))
+}
