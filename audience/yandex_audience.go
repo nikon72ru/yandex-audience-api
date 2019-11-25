@@ -95,7 +95,7 @@ func (c *Client) SegmentsList(pixel ...int) (*[]map[string]interface{}, error) {
 	return &rawMap.Segments, nil
 }
 
-func (c *Client) CreateSegmentFromFile(name, filename, contentType string) (*UploadingSegment, error) {
+func (c *Client) CreateFileSegment(segment *UploadingSegment, filename string) (*UploadingSegment, error) {
 	var f *os.File
 	var err error
 	if f, err = os.Open(filename); err != nil {
@@ -156,8 +156,6 @@ func (c *Client) CreateSegmentFromFile(name, filename, contentType string) (*Upl
 		return nil, err
 	}
 	if respStruct.Segment.Id != 0 {
-		respStruct.Segment.Name = name
-		respStruct.Segment.ContentType = contentType
 		return &respStruct.Segment, nil
 	} else if len(respStruct.Errors) != 0 {
 		return nil, respStruct.Error()
@@ -233,5 +231,85 @@ func (c *Client) RemoveSegment(id int64) (bool, error) {
 		return false, respStruct.Error()
 	} else {
 		return true, nil
+	}
+}
+
+func (c *Client) CreatePixelSegment(segment *PixelSegment) error {
+	requestUrl, err := url.Parse(fmt.Sprintf("%s%s/management/segments/create_pixel?", apiUrl, c.apiVersion))
+	if err != nil {
+		return nil
+	}
+	jsonBody, err := json.Marshal(struct {
+		Segment *PixelSegment `json:"segment"`
+	}{segment})
+	if err != nil {
+		return nil
+	}
+	resp, err := c.hc.Do(&http.Request{
+		Method: http.MethodPost,
+		URL:    requestUrl,
+		Header: http.Header{
+			"Authorization": {fmt.Sprintf("OAuth %s", c.token)},
+		},
+		Body: ioutil.NopCloser(bytes.NewBuffer(jsonBody)),
+	})
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+	var respStruct struct {
+		Segment PixelSegment `json:"segment"`
+		ApiError
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&respStruct); err != nil {
+		return nil
+	}
+	if respStruct.Segment.Id != 0 {
+		segment = &respStruct.Segment
+		return nil
+	} else if len(respStruct.Errors) != 0 {
+		return respStruct.Error()
+	} else {
+		return errors.New("unexpected answer format")
+	}
+}
+
+func (c *Client) CreateLookalikeSegment(segment *LookalikeSegment) error {
+	requestUrl, err := url.Parse(fmt.Sprintf("%s%s/management/segments/create_lookalike?", apiUrl, c.apiVersion))
+	if err != nil {
+		return nil
+	}
+	jsonBody, err := json.Marshal(struct {
+		Segment *LookalikeSegment `json:"segment"`
+	}{segment})
+	if err != nil {
+		return nil
+	}
+	resp, err := c.hc.Do(&http.Request{
+		Method: http.MethodPost,
+		URL:    requestUrl,
+		Header: http.Header{
+			"Authorization": {fmt.Sprintf("OAuth %s", c.token)},
+		},
+		Body: ioutil.NopCloser(bytes.NewBuffer(jsonBody)),
+	})
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+	var respStruct struct {
+		Segment LookalikeSegment `json:"segment"`
+		ApiError
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&respStruct); err != nil {
+		return nil
+	}
+	if respStruct.Segment.Id != 0 {
+		segment = &respStruct.Segment
+		return nil
+	} else if len(respStruct.Errors) != 0 {
+		return respStruct.Error()
+	} else {
+		return errors.New("unexpected answer format")
 	}
 }
