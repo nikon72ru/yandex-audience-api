@@ -2,22 +2,23 @@ package audience
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 )
 
+//BaseSegment defines the fields of the base segment (these fields exist in each type of segment)
 type BaseSegment struct {
-	Id         int64     `json:"id"`
+	ID         int64     `json:"id"`
 	Name       string    `json:"name"`
 	Status     string    `json:"status"`
 	CreateTime time.Time `json:"create_time"`
 	Owner      string    `json:"owner"`
 }
 
+//PixelSegment - a segment created by pixel.
 type PixelSegment struct {
 	BaseSegment
-	PixelId                int    `json:"pixel_id"`
+	PixelID                int    `json:"pixel_id"`
 	PeriodLength           int    `json:"period_length"`
 	TimesQuantity          int    `json:"times_quantity"`
 	TimesQuantityOperation string `json:"times_quantity_operation"`
@@ -28,12 +29,7 @@ type PixelSegment struct {
 	UtmMedium              string `json:"utm_medium"`
 }
 
-type Point struct {
-	Latitude    float64 `json:"latitude"`
-	Longitude   float64 `json:"longitude"`
-	Description string  `json:"description"`
-}
-
+//PolygonGeoSegment - a segment based on geolocation data for polygons.
 type PolygonGeoSegment struct {
 	BaseSegment
 	GeoSegmentType string    `json:"geo_segment_type"`
@@ -42,12 +38,21 @@ type PolygonGeoSegment struct {
 	Polygons       [][]Point `json:"polygons"`
 }
 
+//Point - point's coordinates
+type Point struct {
+	Latitude    float64 `json:"latitude"`
+	Longitude   float64 `json:"longitude"`
+	Description string  `json:"description"`
+}
+
+//AppMetricaSegment - a segment imported from AppMetrica.
 type AppMetricaSegment struct {
 	BaseSegment
 	AppMetricaSegmentType string `json:"app_metrica_segment_type"`
-	AppMetricaSegmentId   int    `json:"app_metrica_segment_id"`
+	AppMetricaSegmentID   int    `json:"app_metrica_segment_id"`
 }
 
+//CircleGeoSegment - segment based on circumferential geolocation data.
 type CircleGeoSegment struct {
 	BaseSegment
 	GeoSegmentType string `json:"geo_segment_type"`
@@ -57,12 +62,14 @@ type CircleGeoSegment struct {
 	Points         []Point
 }
 
+//UploadingSegment - a segment created from a user data file.
 type UploadingSegment struct {
 	BaseSegment
 	Hashed      bool   `json:"hashed"`
 	ContentType string `json:"content_type"`
 }
 
+//LookalikeSegment - a segment from users who are “similar” to another segment of the client (Look-alike technology).
 type LookalikeSegment struct {
 	BaseSegment
 	LookalikeLink              int64 `json:"lookalike_link"`
@@ -71,12 +78,14 @@ type LookalikeSegment struct {
 	MaintainGeoDistribution    bool  `json:"maintain_geo_distribution"`
 }
 
+//MetrikaSegment - a segment imported from Yandex.Metrica.
 type MetrikaSegment struct {
 	BaseSegment
 	MetrikaSegmentType string `json:"metrika_segment_type"`
-	MetrikaSegmentId   int    `json:"metrika_segment_id"`
+	MetrikaSegmentID   int    `json:"metrika_segment_id"`
 }
 
+//Segments - a group of segments
 type Segments struct {
 	MetrikaSegments    []MetrikaSegment
 	LookalikeSegments  []LookalikeSegment
@@ -88,19 +97,21 @@ type Segments struct {
 	UnknownSegmtns     []BaseSegment
 }
 
+//Error - format describing return errors
 type Error struct {
 	ErrorType string `json:"error_type"`
 	Message   string `json:"message"`
 	Location  string `json:"location"`
 }
 
-type ApiError struct {
+//APIError - API returned error
+type APIError struct {
 	Errors  []Error `json:"errors"`
 	Code    int     `json:"code"`
 	Message string  `json:"message"`
 }
 
-func (e *ApiError) Error() error {
+func (e *APIError) Error() error {
 	err, _ := json.Marshal(e.Errors)
-	return errors.New(fmt.Sprintf("%d: %s ([%s])", e.Code, e.Message, err))
+	return fmt.Errorf("%d: %s ([%s])", e.Code, e.Message, err)
 }
