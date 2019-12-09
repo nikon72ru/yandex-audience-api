@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/martian/log"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -113,8 +114,8 @@ func (c *Client) CreateFileSegment(segment *UploadingSegment, filename string) (
 	go func() {
 		var part io.Writer
 		var err error
-		defer wp.Close()
-		defer f.Close()
+		defer closer(wp)
+		defer closer(f)
 		if part, err = mpw.CreateFormField("key"); err != nil {
 			return
 		}
@@ -150,7 +151,7 @@ func (c *Client) CreateFileSegment(segment *UploadingSegment, filename string) (
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer closer(resp.Body)
 	if err := <-errorChan; err != nil {
 		return nil, err
 	}
@@ -193,7 +194,7 @@ func (c *Client) SaveUploadedSegment(segment *UploadingSegment) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer closer(resp.Body)
 	var respStruct struct {
 		Segment UploadingSegment `json:"segment"`
 		APIError
@@ -227,7 +228,7 @@ func (c *Client) RemoveSegment(id int64) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer resp.Body.Close()
+	defer closer(resp.Body)
 	var respStruct struct {
 		Success bool `json:"success"`
 		APIError
@@ -266,7 +267,7 @@ func (c *Client) CreatePixelSegment(segment *PixelSegment) error {
 	if err != nil {
 		return nil
 	}
-	defer resp.Body.Close()
+	defer closer(resp.Body)
 	var respStruct struct {
 		Segment PixelSegment `json:"segment"`
 		APIError
@@ -307,7 +308,7 @@ func (c *Client) CreateLookalikeSegment(segment *LookalikeSegment) error {
 	if err != nil {
 		return nil
 	}
-	defer resp.Body.Close()
+	defer closer(resp.Body)
 	var respStruct struct {
 		Segment LookalikeSegment `json:"segment"`
 		APIError
@@ -323,4 +324,10 @@ func (c *Client) CreateLookalikeSegment(segment *LookalikeSegment) error {
 		return respStruct.Error()
 	}
 	return errors.New("unexpected answer format")
+}
+
+func closer(p io.Closer) {
+	if err := p.Close(); err != nil {
+		log.Errorf("can't close: %s", err.Error())
+	}
 }
