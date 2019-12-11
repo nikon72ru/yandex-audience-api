@@ -18,7 +18,7 @@ type Grant struct {
 }
 
 //GrantsList - returns information about segment management permissions.
-func (c *Client) GrantsList(segmentID int64) (*[]Grant, error) {
+func (c *Client) GrantsList(segmentID int64) ([]*Grant, error) {
 	resp, err := c.Do(&http.Request{
 		Method: http.MethodGet,
 	}, fmt.Sprintf("segment/%d/grants", segmentID))
@@ -27,7 +27,7 @@ func (c *Client) GrantsList(segmentID int64) (*[]Grant, error) {
 	}
 	defer closer(resp.Body)
 	var response struct {
-		Grants []Grant `json:"grants"`
+		Grants []*Grant `json:"grants"`
 		APIError
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
@@ -36,7 +36,7 @@ func (c *Client) GrantsList(segmentID int64) (*[]Grant, error) {
 	if len(response.Errors) != 0 {
 		return nil, response.Error()
 	}
-	return &response.Grants, nil
+	return response.Grants, nil
 }
 
 //CreateGrant - creates permission to manage a segment.

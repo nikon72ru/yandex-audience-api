@@ -20,7 +20,7 @@ type Pixel struct {
 }
 
 //PixelsList - returns a list of existing user pixels.
-func (c *Client) PixelsList() (*[]Pixel, error) {
+func (c *Client) PixelsList() ([]*Pixel, error) {
 	resp, err := c.Do(&http.Request{
 		Method: http.MethodGet,
 	}, "pixels")
@@ -29,7 +29,7 @@ func (c *Client) PixelsList() (*[]Pixel, error) {
 	}
 	defer closer(resp.Body)
 	var response struct {
-		Pixels []Pixel `json:"pixels"`
+		Pixels []*Pixel `json:"pixels"`
 		APIError
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
@@ -38,7 +38,7 @@ func (c *Client) PixelsList() (*[]Pixel, error) {
 	if len(response.Errors) != 0 {
 		return nil, response.Error()
 	}
-	return &response.Pixels, nil
+	return response.Pixels, nil
 }
 
 //CreatePixel - creates a pixel with the specified parameters.
@@ -134,7 +134,7 @@ func (c *Client) UndeletePixel(pixelID int64) error {
 		return response.Error()
 	}
 	if !response.Success {
-		return ErrNotDeleted
+		return ErrNotRestored
 	}
 	return nil
 }

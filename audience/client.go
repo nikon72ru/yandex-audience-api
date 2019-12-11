@@ -14,15 +14,17 @@ import (
 
 // Errors section
 var (
-	ErrTokenIsNotSet = errors.New("yandex audience token isn't set")
-	ErrNotDeleted    = errors.New("not deleted")
-	ErrNotCreated    = errors.New("not created")
+	ErrTokenIsNotSet  = errors.New("yandex audience token isn't set")
+	ErrNotDeleted     = errors.New("not deleted")
+	ErrNotCreated     = errors.New("not created")
+	ErrNotRestored    = errors.New("not restored")
+	ErrNotReprocessed = errors.New("not reprocessed")
 )
 
 //constants
 const (
 	tokenVariable = "YANDEX_AUDIENCE_TOKEN"
-	apiURL        = "https://api-audience.yandex.ru/"
+	apiURL        = "https://api-audience.yandex.ru"
 )
 
 //Client - a client of yandex audience API

@@ -20,7 +20,7 @@ type Account struct {
 }
 
 //AccountsList - returns a list of accounts the current user is a representative of.
-func (c *Client) AccountsList() (*[]Account, error) {
+func (c *Client) AccountsList() ([]*Account, error) {
 	resp, err := c.Do(&http.Request{
 		Method: http.MethodGet,
 	}, "accounts")
@@ -29,7 +29,7 @@ func (c *Client) AccountsList() (*[]Account, error) {
 	}
 	defer closer(resp.Body)
 	var response struct {
-		Accounts []Account `json:"accounts"`
+		Accounts []*Account `json:"accounts"`
 		APIError
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
@@ -38,5 +38,5 @@ func (c *Client) AccountsList() (*[]Account, error) {
 	if len(response.Errors) != 0 {
 		return nil, response.Error()
 	}
-	return &response.Accounts, nil
+	return response.Accounts, nil
 }

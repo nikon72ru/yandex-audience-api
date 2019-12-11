@@ -19,13 +19,13 @@ func TestClient_DelegatesList(t *testing.T) {
 	}
 	Convey("delegates list", t, func() {
 		Convey("simple case", func() {
-			var data = []Delegate{{UserLogin: "guest", Perm: View, Comment: "1'st comment"}, {UserLogin: "editor", Perm: Edit, Comment: "2'nd comment"}}
+			var data = []*Delegate{{UserLogin: "guest", Perm: View, Comment: "1'st comment"}, {UserLogin: "editor", Perm: Edit, Comment: "2'nd comment"}}
 			//set CreatedAt separately because time format
 			data[0].CreatedAt, _ = time.Parse(time.RFC3339, "2006-01-02T15:04:05Z07:00")
 			data[1].CreatedAt, _ = time.Parse(time.RFC3339, "2007-01-02T15:04:05Z07:00")
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				_ = json.NewEncoder(w).Encode(struct {
-					Delegates []Delegate `json:"delegates"`
+					Delegates []*Delegate `json:"delegates"`
 				}{data})
 			}))
 			defer ts.Close()
@@ -35,7 +35,7 @@ func TestClient_DelegatesList(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			So(*delegates, ShouldResemble, data)
+			So(delegates, ShouldResemble, data)
 		})
 		Convey("zero results", func() {
 			var data = make([]Delegate, 0)
@@ -51,7 +51,7 @@ func TestClient_DelegatesList(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			So(len(*delegates), ShouldEqual, 0)
+			So(len(delegates), ShouldEqual, 0)
 		})
 		Convey("api return error", func() {
 			var data = APIError{

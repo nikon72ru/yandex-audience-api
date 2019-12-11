@@ -12,12 +12,13 @@ import (
 )
 
 func TestNewClient(t *testing.T) {
-	_ = os.Setenv(tokenVariable, "blah")
+	type key string
 	var token = "blah"
+	//var k = key("YANDEX_AUDIENCE_TOKEN")
 	Convey("new client", t, func() {
 		_ = os.Setenv(tokenVariable, "")
 		Convey("token from context", func() {
-			c, err := NewClient(context.Background())
+			c, err := NewClient(context.WithValue(context.Background(), "YANDEX_AUDIENCE_TOKEN", token))
 			So(err, ShouldBeNil)
 			So(c.apiURL, ShouldEqual, apiURL)
 			So(c.hc, ShouldNotBeNil)

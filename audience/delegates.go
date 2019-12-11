@@ -18,7 +18,7 @@ type Delegate struct {
 }
 
 //DelegatesList - returns a list of representatives who have been granted access to the current user account.
-func (c *Client) DelegatesList() (*[]Delegate, error) {
+func (c *Client) DelegatesList() ([]*Delegate, error) {
 	resp, err := c.Do(&http.Request{
 		Method: http.MethodGet,
 	}, "delegates")
@@ -27,7 +27,7 @@ func (c *Client) DelegatesList() (*[]Delegate, error) {
 	}
 	defer closer(resp.Body)
 	var response struct {
-		Delegates []Delegate `json:"delegates"`
+		Delegates []*Delegate `json:"delegates"`
 		APIError
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
@@ -36,7 +36,7 @@ func (c *Client) DelegatesList() (*[]Delegate, error) {
 	if len(response.Errors) != 0 {
 		return nil, response.Error()
 	}
-	return &response.Delegates, nil
+	return response.Delegates, nil
 }
 
 //CreateDelegate - adds the user login to the list of representatives for the current account.

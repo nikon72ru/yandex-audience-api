@@ -21,14 +21,14 @@ func TestClient_GrantsList(t *testing.T) {
 	var segmentID = int64(142)
 	Convey("grants list", t, func() {
 		Convey("simple case", func(c C) {
-			var data = []Grant{{UserLogin: "guest", Comment: "1'st comment"}, {UserLogin: "editor", Comment: "2'nd comment"}}
+			var data = []*Grant{{UserLogin: "guest", Comment: "1'st comment"}, {UserLogin: "editor", Comment: "2'nd comment"}}
 			//set CreatedAt separately because time format
 			data[0].CreatedAt, _ = time.Parse(time.RFC3339, "2006-01-02T15:04:05Z07:00")
 			data[1].CreatedAt, _ = time.Parse(time.RFC3339, "2007-01-02T15:04:05Z07:00")
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				c.So(r.URL.Path, ShouldEndWith, fmt.Sprintf("/segment/%d/grants", segmentID))
 				_ = json.NewEncoder(w).Encode(struct {
-					Grants []Grant `json:"grants"`
+					Grants []*Grant `json:"grants"`
 				}{data})
 			}))
 			defer ts.Close()
@@ -38,7 +38,7 @@ func TestClient_GrantsList(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			So(*grants, ShouldResemble, data)
+			So(grants, ShouldResemble, data)
 		})
 		Convey("zero results", func(c C) {
 			var data = make([]Grant, 0)
@@ -55,7 +55,7 @@ func TestClient_GrantsList(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			So(len(*grants), ShouldEqual, 0)
+			So(len(grants), ShouldEqual, 0)
 		})
 		Convey("api return error", func(c C) {
 			var data = APIError{
@@ -194,5 +194,4 @@ func TestClient_RemoveGrant(t *testing.T) {
 			So(isServerInvoked, ShouldBeTrue)
 		})
 	})
-
 }
