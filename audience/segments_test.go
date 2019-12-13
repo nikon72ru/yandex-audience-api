@@ -1,10 +1,12 @@
 package audience
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	. "github.com/smartystreets/goconvey/convey"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -364,7 +366,50 @@ func TestClient_CreateCircleGeoSegment(t *testing.T) {
 }
 
 func TestClient_CreateFileSegment(t *testing.T) {
-	t.Fatal("implement me")
+	_ = os.Setenv(tokenVariable, "blah")
+	client, err := NewClient(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	Convey("create file segment", t, func() {
+		Convey("check file integrity", func(c C) {
+			filepath := "../test-files/macs_for_uploads.csv"
+			f, err := os.Open(filepath)
+			So(err, ShouldBeNil)
+			data, err := ioutil.ReadAll(f)
+			So(err, ShouldBeNil)
+			_ = f.Close()
+			isServerInvoked := false
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				isServerInvoked = true
+				err := r.ParseMultipartForm(32 << 20)
+				c.So(err, ShouldBeNil)
+				files := r.MultipartForm.File["file"]
+				c.So(len(files), ShouldEqual, 1)
+				file := files[0]
+				f, err := file.Open()
+				c.So(err, ShouldBeNil)
+				receivedData, err := ioutil.ReadAll(f)
+				c.So(err, ShouldBeNil)
+				c.So(receivedData, ShouldResemble, data)
+				c.So(r.URL.Path, ShouldEndWith, "segments/upload_file")
+				_ = json.NewEncoder(w).Encode(struct {
+					Segment UploadingSegment `json:"segment"`
+				}{UploadingSegment{
+					BaseSegment: BaseSegment{ID: 12},
+				}})
+			}))
+			defer ts.Close()
+			client.hc = ts.Client()
+			client.apiURL = ts.URL
+			var segment UploadingSegment
+			err = client.CreateFileSegment(&segment, filepath)
+			So(err, ShouldBeNil)
+			So(segment.ID, ShouldEqual, 12)
+			So(isServerInvoked, ShouldBeTrue)
+		})
+	})
+
 }
 
 func TestClient_CreateLookalikeSegment(t *testing.T) {
@@ -433,7 +478,49 @@ func TestClient_CreateLookalikeSegment(t *testing.T) {
 }
 
 func TestClient_CreateCSVSegment(t *testing.T) {
-	t.Fatal("implement me!")
+	_ = os.Setenv(tokenVariable, "blah")
+	client, err := NewClient(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	Convey("create csv segment", t, func() {
+		Convey("check file integrity", func(c C) {
+			filepath := "../test-files/macs_for_uploads.csv"
+			f, err := os.Open(filepath)
+			So(err, ShouldBeNil)
+			data, err := ioutil.ReadAll(f)
+			So(err, ShouldBeNil)
+			_ = f.Close()
+			isServerInvoked := false
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				isServerInvoked = true
+				err := r.ParseMultipartForm(32 << 20)
+				c.So(err, ShouldBeNil)
+				files := r.MultipartForm.File["file"]
+				c.So(len(files), ShouldEqual, 1)
+				file := files[0]
+				f, err := file.Open()
+				c.So(err, ShouldBeNil)
+				receivedData, err := ioutil.ReadAll(f)
+				c.So(err, ShouldBeNil)
+				c.So(receivedData, ShouldResemble, data)
+				c.So(r.URL.Path, ShouldEndWith, "segments/upload_csv_file")
+				_ = json.NewEncoder(w).Encode(struct {
+					Segment UploadingSegment `json:"segment"`
+				}{UploadingSegment{
+					BaseSegment: BaseSegment{ID: 12},
+				}})
+			}))
+			defer ts.Close()
+			client.hc = ts.Client()
+			client.apiURL = ts.URL
+			var segment UploadingSegment
+			err = client.CreateCSVSegment(&segment, filepath)
+			So(err, ShouldBeNil)
+			So(segment.ID, ShouldEqual, 12)
+			So(isServerInvoked, ShouldBeTrue)
+		})
+	})
 }
 
 func TestClient_CreateMetrikaSegment(t *testing.T) {
@@ -655,7 +742,49 @@ func TestClient_CreatePolygonGeoSegment(t *testing.T) {
 }
 
 func TestClient_CreateReaderSegment(t *testing.T) {
-	t.Fatal("implement me!")
+	_ = os.Setenv(tokenVariable, "blah")
+	client, err := NewClient(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	Convey("create reader segment", t, func() {
+		Convey("check file integrity", func(c C) {
+			name := "new segment name"
+			f, err := os.Open("../test-files/macs_for_uploads.csv")
+			So(err, ShouldBeNil)
+			data, err := ioutil.ReadAll(f)
+			So(err, ShouldBeNil)
+			_ = f.Close()
+			isServerInvoked := false
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				isServerInvoked = true
+				err := r.ParseMultipartForm(32 << 20)
+				c.So(err, ShouldBeNil)
+				files := r.MultipartForm.File["file"]
+				c.So(len(files), ShouldEqual, 1)
+				file := files[0]
+				f, err := file.Open()
+				c.So(err, ShouldBeNil)
+				receivedData, err := ioutil.ReadAll(f)
+				c.So(err, ShouldBeNil)
+				c.So(receivedData, ShouldResemble, data)
+				c.So(r.URL.Path, ShouldEndWith, "segments/upload_file")
+				_ = json.NewEncoder(w).Encode(struct {
+					Segment UploadingSegment `json:"segment"`
+				}{UploadingSegment{
+					BaseSegment: BaseSegment{ID: 12},
+				}})
+			}))
+			defer ts.Close()
+			client.hc = ts.Client()
+			client.apiURL = ts.URL
+			var segment UploadingSegment
+			err = client.CreateReaderSegment(&segment, bytes.NewBuffer(data), name, false)
+			So(err, ShouldBeNil)
+			So(segment.ID, ShouldEqual, 12)
+			So(isServerInvoked, ShouldBeTrue)
+		})
+	})
 }
 
 func TestClient_RemoveSegment(t *testing.T) {
@@ -793,7 +922,70 @@ func TestClient_ReprocessSegment(t *testing.T) {
 }
 
 func TestClient_SaveUploadedSegment(t *testing.T) {
-	t.Fatal("implement me!")
+	_ = os.Setenv(tokenVariable, "blah")
+	client, err := NewClient(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	Convey("save uploaded segment", t, func() {
+		Convey("simple case", func(c C) {
+			segment := UploadingSegment{
+				BaseSegment: BaseSegment{
+					ID:   12,
+					Name: "segmentname",
+				},
+				Hashed:      true,
+				ContentType: Mac,
+			}
+			creationTime := time.Now()
+			isServerInvoked := false
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var s struct {
+					Segment UploadingSegment `json:"segment"`
+				}
+				err = json.NewDecoder(r.Body).Decode(&s)
+				c.So(err, ShouldBeNil)
+				isServerInvoked = true
+				c.So(r.URL.Path, ShouldEndWith, fmt.Sprintf("segment/%d/confirm", segment.ID))
+				c.So(r.Method, ShouldEqual, http.MethodPost)
+				c.So(s.Segment, ShouldResemble, segment)
+				s.Segment.CreateTime = creationTime
+				_ = json.NewEncoder(w).Encode(struct {
+					Segment *UploadingSegment `json:"segment"`
+				}{&s.Segment})
+			}))
+			defer ts.Close()
+			client.hc = ts.Client()
+			client.apiURL = ts.URL
+			if err := client.SaveUploadedSegment(&segment); err != nil {
+				So(err, ShouldBeNil)
+			}
+			So(isServerInvoked, ShouldBeTrue)
+			So(segment.CreateTime, ShouldEqual, creationTime)
+		})
+		Convey("api return error", func(c C) {
+			segmentID := int64(13)
+			var data = APIError{
+				Errors: []Error{{
+					ErrorType: "backend_error",
+					Message:   "simple error",
+					Location:  "right here",
+				}},
+				Code:    503,
+				Message: "simple error",
+			}
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				c.So(r.URL.Path, ShouldEndWith, fmt.Sprintf("segment/%d/confirm", segmentID))
+				c.So(r.Method, ShouldEqual, http.MethodPost)
+				_ = json.NewEncoder(w).Encode(data)
+			}))
+			defer ts.Close()
+			client.hc = ts.Client()
+			client.apiURL = ts.URL
+			err := client.SaveUploadedSegment(&UploadingSegment{BaseSegment: BaseSegment{ID: segmentID}})
+			So(err, ShouldResemble, data.Error())
+		})
+	})
 }
 
 func TestClient_UpdateSegment(t *testing.T) {

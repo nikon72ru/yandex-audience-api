@@ -12,7 +12,6 @@ import (
 )
 
 func TestNewClient(t *testing.T) {
-	type key string
 	var token = "blah"
 	//var k = key("YANDEX_AUDIENCE_TOKEN")
 	Convey("new client", t, func() {

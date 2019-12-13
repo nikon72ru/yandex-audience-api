@@ -160,13 +160,6 @@ func (c *Client) CreateReaderSegment(segment *UploadingSegment, reader io.Reader
 		var part io.Writer
 		var err error
 		defer closer(wp)
-		if part, err = mpw.CreateFormField("key"); err != nil {
-			return
-		}
-		if _, err = part.Write([]byte("KEY")); err != nil {
-			return
-		}
-
 		if part, err = mpw.CreateFormFile("file", name); err != nil {
 			errorChan <- err
 			return
@@ -183,13 +176,14 @@ func (c *Client) CreateReaderSegment(segment *UploadingSegment, reader io.Reader
 	if isCSV {
 		URLPath = "upload_csv_file"
 	}
-	resp, err := c.Do(&http.Request{
+	req := http.Request{
 		Method: http.MethodPost,
 		Header: http.Header{
 			"Content-Type": {mpw.FormDataContentType()},
 		},
 		Body: rp,
-	}, fmt.Sprintf("segments/%s", URLPath))
+	}
+	resp, err := c.Do(&req, fmt.Sprintf("segments/%s", URLPath))
 	if err != nil {
 		return err
 	}
@@ -197,28 +191,29 @@ func (c *Client) CreateReaderSegment(segment *UploadingSegment, reader io.Reader
 	if err := <-errorChan; err != nil {
 		return err
 	}
-	var respStruct struct {
-		Segment UploadingSegment `json:"segment"`
+	requestStruct := struct {
+		Segment *UploadingSegment `json:"segment"`
 		APIError
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&respStruct); err != nil {
+	}{Segment: segment}
+	if err := json.NewDecoder(resp.Body).Decode(&requestStruct); err != nil {
 		return err
 	}
-	if len(respStruct.Errors) != 0 {
-		return respStruct.Error()
+	if len(requestStruct.Errors) != 0 {
+		return requestStruct.Error()
 	}
-	if respStruct.Segment.ID != 0 {
-		segment = &respStruct.Segment
-		return nil
+	if segment.ID == 0 {
+		return ErrNotCreated
 	}
-	return ErrNotCreated
+	return nil
 }
 
 //SaveUploadedSegment - saves a segment created from a data file.
 func (c *Client) SaveUploadedSegment(segment *UploadingSegment) error {
-	jsonBody, err := json.Marshal(struct {
+	requestStruct := struct {
 		Segment *UploadingSegment `json:"segment"`
-	}{segment})
+		APIError
+	}{Segment: segment}
+	jsonBody, err := json.Marshal(requestStruct)
 	if err != nil {
 		return err
 	}
@@ -230,14 +225,11 @@ func (c *Client) SaveUploadedSegment(segment *UploadingSegment) error {
 		return err
 	}
 	defer closer(resp.Body)
-	var respStruct struct {
-		APIError
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&respStruct); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&requestStruct); err != nil {
 		return err
 	}
-	if len(respStruct.Errors) != 0 {
-		return respStruct.Error()
+	if len(requestStruct.Errors) != 0 {
+		return requestStruct.Error()
 	}
 	return nil
 }

@@ -59,9 +59,10 @@ func NewClient(ctx context.Context) (*Client, error) {
 
 //Do - append authorization header with token and call simple http.Client Do method
 func (c *Client) Do(req *http.Request, path string) (*http.Response, error) {
-	req.Header = http.Header{
-		"Authorization": {fmt.Sprintf("OAuth %s", c.token)},
+	if req.Header == nil {
+		req.Header = http.Header{}
 	}
+	req.Header.Add("Authorization", fmt.Sprintf("OAuth %s", c.token))
 	u, err := url.Parse(fmt.Sprintf("%s/%s/management/%s", c.apiURL, c.apiVersion, path))
 	if err != nil {
 		return nil, err
