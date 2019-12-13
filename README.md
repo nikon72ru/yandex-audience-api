@@ -11,6 +11,31 @@
 | Pixels | [Update pixel](https://yandex.ru/dev/audience/doc/pixels/edit-docpage/) | :heavy_check_mark: | 
 | Pixels | [Remove pixel](https://yandex.ru/dev/audience/doc/pixels/delete-docpage/) | :heavy_check_mark: | 
 | Pixels | [Restore pixel](https://yandex.ru/dev/audience/doc/pixels/undelete-docpage/) | :heavy_check_mark: | 
+| Delegates | [List of delegates](https://yandex.ru/dev/audience/doc/delegates/delegates-docpage/) | :heavy_check_mark: | 
+| Delegates | [Create delegate](https://yandex.ru/dev/audience/doc/delegates/adddelegate-docpage/) | :heavy_check_mark: | 
+| Delegates | [Remove delegate](https://yandex.ru/dev/audience/doc/delegates/deletedelegate-docpage/) | :heavy_check_mark: |
+| Accounts | [List of accounts](https://yandex.ru/dev/audience/doc/accounts/accounts-docpage/) | :heavy_check_mark: | 
+| Grants | [List of grants](https://yandex.ru/dev/audience/doc/grants/grants-docpage/) | :heavy_check_mark: | 
+| Grants | [Create grant](https://yandex.ru/dev/audience/doc/grants/addgrant-docpage/) | :heavy_check_mark: | 
+| Grants | [Remove grant](https://yandex.ru/dev/audience/doc/grants/deletegrant-docpage/) | :heavy_check_mark: |
+| Segments | [Segments list](https://yandex.ru/dev/audience/doc/segments/segments-docpage/) | :heavy_check_mark: |
+| Segments | [Create "pixel" segment](https://yandex.ru/dev/audience/doc/segments/createpixel-docpage/) | :heavy_check_mark: |
+| Segments | [Create "lookalike" segment](https://yandex.ru/dev/audience/doc/segments/createlookalike-docpage/) | :heavy_check_mark: |
+| Segments | [Create segment from metrika](https://yandex.ru/dev/audience/doc/segments/createmetrika-docpage/) | :heavy_check_mark: |
+| Segments | [Create segment from app metrika](https://yandex.ru/dev/audience/doc/segments/createappmetrica-docpage/) | :heavy_check_mark: |
+| Segments | [Create geo-circle segment](https://yandex.ru/dev/audience/doc/segments/creategeo-docpage/) | :heavy_check_mark: |
+| Segments | [Create geo-polygons segment](https://yandex.ru/dev/audience/doc/segments/creategeopolygon-docpage/) | :heavy_check_mark: |
+| Segments | [Create segment from file](https://yandex.ru/dev/audience/doc/segments/uploadfile-docpage/) | :heavy_check_mark: |
+| Segments | [Create segment from csv](https://yandex.ru/dev/audience/doc/segments/uploadcsvfile-docpage/) | :heavy_check_mark: |
+| Segments | [Save uploaded segment](https://yandex.ru/dev/audience/doc/segments/confirm-docpage/) | :heavy_check_mark: |
+| Segments | [Update segment](https://yandex.ru/dev/audience/doc/segments/edit-docpage/) | :heavy_check_mark: |
+| Segments | [Remove segment](https://yandex.ru/dev/audience/doc/segments/delete-docpage/) | :heavy_check_mark: |
+| Segments | [Reprocess segment](https://yandex.ru/dev/audience/doc/segments/reprocesssegment-docpage/) | :heavy_check_mark: |
+| Segments | [Update coords in geo-circle segment](https://yandex.ru/dev/audience/doc/segments/updategeopoints-docpage/) | :x: |
+| Segments | [Save uploaded ClientID segment](https://yandex.ru/dev/audience/doc/segments/confirmclientid-docpage/) | :x: |
+| Segments | [Update uploaded segment](https://yandex.ru/dev/audience/doc/segments/modifyuploadingdata-docpage/) | :x: |
+
+
 ## Quickstart
 ``` golang
 package main
@@ -107,7 +132,7 @@ func main() {
 	}
 }
 ```
-CreateCSVSegment() and CreateReaderSegment() methods also supported
+### CreateCSVSegment() and CreateReaderSegment() methods also supported
 ----------------------------------------
 ## Any questions?
 Welcome to create issue!
