@@ -296,7 +296,7 @@ func (c *Client) createSegment(segment interface{}, URLPath string) error {
 		Segment interface{} `json:"segment"`
 		APIError
 	}{Segment: segment}
-	jsonBody, err := json.Marshal(requestStruct.Segment)
+	jsonBody, err := json.Marshal(requestStruct)
 	if err != nil {
 		return nil
 	}
