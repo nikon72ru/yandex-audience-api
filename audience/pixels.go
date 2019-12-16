@@ -11,7 +11,7 @@ import (
 
 //Pixel - type of segment, created by yandex pixel
 type Pixel struct {
-	ID             int       `json:"id"`
+	ID             int64     `json:"id"`
 	Name           string    `json:"name"`
 	UserQuantity7  int64     `json:"user_quantity_7"`
 	UserQuantity30 int64     `json:"user_quantity_30"`
@@ -43,7 +43,11 @@ func (c *Client) PixelsList() ([]*Pixel, error) {
 
 //CreatePixel - creates a pixel with the specified parameters.
 func (c *Client) CreatePixel(pixel *Pixel) error {
-	jsonBody, _ := json.Marshal(pixel)
+	requestStruct := struct {
+		Pixel *Pixel `json:"pixel"`
+		APIError
+	}{Pixel: pixel}
+	jsonBody, _ := json.Marshal(requestStruct)
 	resp, err := c.Do(&http.Request{
 		Method: http.MethodPost,
 		Body:   ioutil.NopCloser(bytes.NewBuffer(jsonBody)),
@@ -52,14 +56,11 @@ func (c *Client) CreatePixel(pixel *Pixel) error {
 		return err
 	}
 	defer closer(resp.Body)
-	var response struct {
-		APIError
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&requestStruct); err != nil {
 		return err
 	}
-	if len(response.Errors) != 0 {
-		return response.Error()
+	if len(requestStruct.Errors) != 0 {
+		return requestStruct.Error()
 	}
 	return nil
 }
@@ -91,7 +92,11 @@ func (c *Client) RemovePixel(pixelID int64) error {
 
 //UpdatePixel - changes the specified pixel.
 func (c *Client) UpdatePixel(pixel *Pixel) error {
-	jsonBody, _ := json.Marshal(pixel)
+	requestStruct := struct {
+		Pixel *Pixel `json:"pixel"`
+		APIError
+	}{Pixel: pixel}
+	jsonBody, _ := json.Marshal(requestStruct)
 	resp, err := c.Do(&http.Request{
 		Method: http.MethodPut,
 		Body:   ioutil.NopCloser(bytes.NewBuffer(jsonBody)),
@@ -100,17 +105,12 @@ func (c *Client) UpdatePixel(pixel *Pixel) error {
 		return err
 	}
 	defer closer(resp.Body)
-	var response struct {
-		Pixel Pixel `json:"pixel"`
-		APIError
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&requestStruct); err != nil {
 		return err
 	}
-	if len(response.Errors) != 0 {
-		return response.Error()
+	if len(requestStruct.Errors) != 0 {
+		return requestStruct.Error()
 	}
-	*pixel = response.Pixel
 	return nil
 }
 

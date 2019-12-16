@@ -21,6 +21,23 @@ func TestClient_SegmentsList(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	points := Points{Points: []Point{{
+		Latitude:    65,
+		Longitude:   65,
+		Description: "left bottom",
+	}, {
+		Latitude:    66,
+		Longitude:   65,
+		Description: "right bottom",
+	}, {
+		Latitude:    65,
+		Longitude:   66,
+		Description: "left up",
+	}, {
+		Latitude:    66,
+		Longitude:   66,
+		Description: "right up",
+	}}}
 	Convey("segments list", t, func() {
 		Convey("simple case", func(c C) {
 			var data = []interface{}{
@@ -108,26 +125,8 @@ func TestClient_SegmentsList(t *testing.T) {
 					GeoSegmentType: "work",
 					TimesQuantity:  3,
 					PeriodLength:   13,
-					Polygons: [][]Point{
-						{
-							{
-								Latitude:    65,
-								Longitude:   65,
-								Description: "left bottom",
-							}, {
-								Latitude:    66,
-								Longitude:   65,
-								Description: "right bottom",
-							}, {
-								Latitude:    65,
-								Longitude:   66,
-								Description: "left up",
-							}, {
-								Latitude:    66,
-								Longitude:   66,
-								Description: "right up",
-							},
-						},
+					Polygons: []Points{
+						points,
 					},
 				},
 			}
@@ -253,14 +252,14 @@ func TestClient_CreateAppMetrikaSegment(t *testing.T) {
 			var createdTime = time.Now()
 			isServerInvoked := false
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				var d AppMetricaSegment
-				_ = json.NewDecoder(r.Body).Decode(&d)
-				c.So(d, ShouldResemble, data)
-				isServerInvoked = true
-				d.CreateTime = createdTime
-				_ = json.NewEncoder(w).Encode(struct {
+				var d struct {
 					Segment AppMetricaSegment `json:"segment"`
-				}{d})
+				}
+				_ = json.NewDecoder(r.Body).Decode(&d)
+				c.So(d.Segment, ShouldResemble, data)
+				isServerInvoked = true
+				d.Segment.CreateTime = createdTime
+				_ = json.NewEncoder(w).Encode(d)
 			}))
 			defer ts.Close()
 			client.hc = ts.Client()
@@ -325,14 +324,14 @@ func TestClient_CreateCircleGeoSegment(t *testing.T) {
 			isServerInvoked := false
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				c.So(r.URL.Path, ShouldEndWith, "segments/create_geo")
-				var d CircleGeoSegment
-				_ = json.NewDecoder(r.Body).Decode(&d)
-				c.So(d, ShouldResemble, data)
-				isServerInvoked = true
-				d.CreateTime = createdTime
-				_ = json.NewEncoder(w).Encode(struct {
+				var d struct {
 					Segment CircleGeoSegment `json:"segment"`
-				}{d})
+				}
+				_ = json.NewDecoder(r.Body).Decode(&d)
+				c.So(d.Segment, ShouldResemble, data)
+				isServerInvoked = true
+				d.Segment.CreateTime = createdTime
+				_ = json.NewEncoder(w).Encode(d)
 			}))
 			defer ts.Close()
 			client.hc = ts.Client()
@@ -402,7 +401,9 @@ func TestClient_CreateFileSegment(t *testing.T) {
 			defer ts.Close()
 			client.hc = ts.Client()
 			client.apiURL = ts.URL
-			var segment UploadingSegment
+			var segment = UploadingSegment{
+				BaseSegment: BaseSegment{Name: "file segment"},
+			}
 			err = client.CreateFileSegment(&segment, filepath)
 			So(err, ShouldBeNil)
 			So(segment.ID, ShouldEqual, 12)
@@ -437,14 +438,14 @@ func TestClient_CreateLookalikeSegment(t *testing.T) {
 			isServerInvoked := false
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				c.So(r.URL.Path, ShouldEndWith, "segments/create_lookalike")
-				var d LookalikeSegment
-				_ = json.NewDecoder(r.Body).Decode(&d)
-				c.So(d, ShouldResemble, data)
-				isServerInvoked = true
-				d.CreateTime = createdTime
-				_ = json.NewEncoder(w).Encode(struct {
+				var d struct {
 					Segment LookalikeSegment `json:"segment"`
-				}{d})
+				}
+				_ = json.NewDecoder(r.Body).Decode(&d)
+				c.So(d.Segment, ShouldResemble, data)
+				isServerInvoked = true
+				d.Segment.CreateTime = createdTime
+				_ = json.NewEncoder(w).Encode(d)
 			}))
 			defer ts.Close()
 			client.hc = ts.Client()
@@ -514,7 +515,9 @@ func TestClient_CreateCSVSegment(t *testing.T) {
 			defer ts.Close()
 			client.hc = ts.Client()
 			client.apiURL = ts.URL
-			var segment UploadingSegment
+			var segment = UploadingSegment{
+				BaseSegment: BaseSegment{Name: "segment from csv file"},
+			}
 			err = client.CreateCSVSegment(&segment, filepath)
 			So(err, ShouldBeNil)
 			So(segment.ID, ShouldEqual, 12)
@@ -545,15 +548,15 @@ func TestClient_CreateMetrikaSegment(t *testing.T) {
 			var createdTime = time.Now()
 			isServerInvoked := false
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				var d MetrikaSegment
-				_ = json.NewDecoder(r.Body).Decode(&d)
-				c.So(d, ShouldResemble, data)
-				isServerInvoked = true
-				d.CreateTime = createdTime
-				c.So(r.URL.Path, ShouldEndWith, "create_metrika")
-				_ = json.NewEncoder(w).Encode(struct {
+				var d struct {
 					Segment MetrikaSegment `json:"segment"`
-				}{d})
+				}
+				_ = json.NewDecoder(r.Body).Decode(&d)
+				c.So(d.Segment, ShouldResemble, data)
+				isServerInvoked = true
+				d.Segment.CreateTime = createdTime
+				c.So(r.URL.Path, ShouldEndWith, "create_metrika")
+				_ = json.NewEncoder(w).Encode(d)
 			}))
 			defer ts.Close()
 			client.hc = ts.Client()
@@ -615,15 +618,15 @@ func TestClient_CreatePixelSegment(t *testing.T) {
 			var createdTime = time.Now()
 			isServerInvoked := false
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				var d PixelSegment
-				_ = json.NewDecoder(r.Body).Decode(&d)
-				c.So(d, ShouldResemble, data)
-				isServerInvoked = true
-				d.CreateTime = createdTime
-				c.So(r.URL.Path, ShouldEndWith, "create_pixel")
-				_ = json.NewEncoder(w).Encode(struct {
+				var d struct {
 					Segment PixelSegment `json:"segment"`
-				}{d})
+				}
+				_ = json.NewDecoder(r.Body).Decode(&d)
+				c.So(d.Segment, ShouldResemble, data)
+				isServerInvoked = true
+				d.Segment.CreateTime = createdTime
+				c.So(r.URL.Path, ShouldEndWith, "create_pixel")
+				_ = json.NewEncoder(w).Encode(d)
 			}))
 			defer ts.Close()
 			client.hc = ts.Client()
@@ -662,6 +665,23 @@ func TestClient_CreatePolygonGeoSegment(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	points := Points{Points: []Point{{
+		Latitude:    65,
+		Longitude:   65,
+		Description: "left bottom",
+	}, {
+		Latitude:    66,
+		Longitude:   65,
+		Description: "right bottom",
+	}, {
+		Latitude:    65,
+		Longitude:   66,
+		Description: "left up",
+	}, {
+		Latitude:    66,
+		Longitude:   66,
+		Description: "right up",
+	}}}
 	Convey("create polygon geo segment", t, func() {
 		Convey("simple case", func(c C) {
 			var data = PolygonGeoSegment{
@@ -675,40 +695,20 @@ func TestClient_CreatePolygonGeoSegment(t *testing.T) {
 				GeoSegmentType: "work",
 				TimesQuantity:  3,
 				PeriodLength:   13,
-				Polygons: [][]Point{
-					{
-						{
-							Latitude:    65,
-							Longitude:   65,
-							Description: "left bottom",
-						}, {
-							Latitude:    66,
-							Longitude:   65,
-							Description: "right bottom",
-						}, {
-							Latitude:    65,
-							Longitude:   66,
-							Description: "left up",
-						}, {
-							Latitude:    66,
-							Longitude:   66,
-							Description: "right up",
-						},
-					},
-				},
+				Polygons:       []Points{points},
 			}
 			var createdTime = time.Now()
 			isServerInvoked := false
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				var d PolygonGeoSegment
-				_ = json.NewDecoder(r.Body).Decode(&d)
-				c.So(d, ShouldResemble, data)
-				isServerInvoked = true
-				d.CreateTime = createdTime
-				c.So(r.URL.Path, ShouldEndWith, "create_geo_polygon")
-				_ = json.NewEncoder(w).Encode(struct {
+				var d struct {
 					Segment PolygonGeoSegment `json:"segment"`
-				}{d})
+				}
+				_ = json.NewDecoder(r.Body).Decode(&d)
+				c.So(d.Segment, ShouldResemble, data)
+				isServerInvoked = true
+				d.Segment.CreateTime = createdTime
+				c.So(r.URL.Path, ShouldEndWith, "create_geo_polygon")
+				_ = json.NewEncoder(w).Encode(d)
 			}))
 			defer ts.Close()
 			client.hc = ts.Client()
@@ -749,7 +749,6 @@ func TestClient_CreateReaderSegment(t *testing.T) {
 	}
 	Convey("create reader segment", t, func() {
 		Convey("check file integrity", func(c C) {
-			name := "new segment name"
 			f, err := os.Open("../test-files/macs_for_uploads.csv")
 			So(err, ShouldBeNil)
 			data, err := ioutil.ReadAll(f)
@@ -778,8 +777,10 @@ func TestClient_CreateReaderSegment(t *testing.T) {
 			defer ts.Close()
 			client.hc = ts.Client()
 			client.apiURL = ts.URL
-			var segment UploadingSegment
-			err = client.CreateReaderSegment(&segment, bytes.NewBuffer(data), name, false)
+			var segment = UploadingSegment{
+				BaseSegment: BaseSegment{Name: "test segment"},
+			}
+			err = client.CreateReaderSegment(&segment, bytes.NewBuffer(data), false)
 			So(err, ShouldBeNil)
 			So(segment.ID, ShouldEqual, 12)
 			So(isServerInvoked, ShouldBeTrue)
@@ -1009,13 +1010,13 @@ func TestClient_UpdateSegment(t *testing.T) {
 			}
 			isServerInvoked := false
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				var d AppMetricaSegment
-				_ = json.NewDecoder(r.Body).Decode(&d)
-				c.So(d, ShouldResemble, data)
-				isServerInvoked = true
-				_ = json.NewEncoder(w).Encode(struct {
+				var d struct {
 					Segment AppMetricaSegment `json:"segment"`
-				}{d})
+				}
+				_ = json.NewDecoder(r.Body).Decode(&d)
+				c.So(d.Segment, ShouldResemble, data)
+				isServerInvoked = true
+				_ = json.NewEncoder(w).Encode(d)
 			}))
 			defer ts.Close()
 			client.hc = ts.Client()

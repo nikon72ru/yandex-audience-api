@@ -93,9 +93,12 @@ func TestClient_CreateGrant(t *testing.T) {
 			data.CreatedAt, _ = time.Parse(time.RFC3339, "2006-01-02T15:04:05Z07:00")
 			isServerInvoked := false
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				var d Grant
+				var d = struct {
+					Grant Grant `json:"grant"`
+					APIError
+				}{Grant: Grant{}}
 				_ = json.NewDecoder(r.Body).Decode(&d)
-				c.So(d, ShouldResemble, data)
+				c.So(d.Grant, ShouldResemble, data)
 				c.So(r.URL.Path, ShouldEndWith, fmt.Sprintf("segment/%d/grant", segmentID))
 				isServerInvoked = true
 				_ = json.NewEncoder(w).Encode(struct{}{})
@@ -144,7 +147,7 @@ func TestClient_RemoveGrant(t *testing.T) {
 			isServerInvoked := false
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				isServerInvoked = true
-				c.So(r.URL.Path, ShouldEndWith, login)
+				c.So(r.URL.String(), ShouldEndWith, login)
 				_ = json.NewEncoder(w).Encode(struct {
 					Success bool `json:"success"`
 				}{true})
@@ -168,7 +171,7 @@ func TestClient_RemoveGrant(t *testing.T) {
 				Message: "simple error",
 			}
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				c.So(r.URL.Path, ShouldEndWith, login)
+				c.So(r.URL.String(), ShouldEndWith, login)
 				_ = json.NewEncoder(w).Encode(data)
 			}))
 			defer ts.Close()
@@ -181,7 +184,7 @@ func TestClient_RemoveGrant(t *testing.T) {
 			isServerInvoked := false
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				isServerInvoked = true
-				c.So(r.URL.Path, ShouldEndWith, login)
+				c.So(r.URL.String(), ShouldEndWith, login)
 				_ = json.NewEncoder(w).Encode(struct {
 					Success bool `json:"success"`
 				}{false})

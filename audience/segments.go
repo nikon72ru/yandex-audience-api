@@ -49,10 +49,15 @@ type PixelSegment struct {
 //PolygonGeoSegment - a segment based on geolocation data for polygons.
 type PolygonGeoSegment struct {
 	BaseSegment
-	GeoSegmentType string    `json:"geo_segment_type"`
-	TimesQuantity  int       `json:"times_quantity"`
-	PeriodLength   int       `json:"period_length"`
-	Polygons       [][]Point `json:"polygons"`
+	GeoSegmentType string   `json:"geo_segment_type"`
+	TimesQuantity  int      `json:"times_quantity"`
+	PeriodLength   int      `json:"period_length"`
+	Polygons       []Points `json:"polygons"`
+}
+
+//Points - a group of points
+type Points struct {
+	Points []Point `json:"points"`
 }
 
 //Point - point's coordinates
@@ -72,11 +77,11 @@ type AppMetricaSegment struct {
 //CircleGeoSegment - segment based on circumferential geolocation data.
 type CircleGeoSegment struct {
 	BaseSegment
-	GeoSegmentType string `json:"geo_segment_type"`
-	TimesQuantity  int    `json:"times_quantity"`
-	PeriodLength   int    `json:"period_length"`
-	Radius         int    `json:"radius"`
-	Points         []Point
+	GeoSegmentType string  `json:"geo_segment_type"`
+	TimesQuantity  int     `json:"times_quantity"`
+	PeriodLength   int     `json:"period_length"`
+	Radius         int     `json:"radius"`
+	Points         []Point `json:"points"`
 }
 
 //UploadingSegment - a segment created from a user data file.
@@ -137,7 +142,7 @@ func (c *Client) CreateFileSegment(segment *UploadingSegment, filename string) e
 		return err
 	}
 	defer closer(f)
-	return c.CreateReaderSegment(segment, f, filename, false)
+	return c.CreateReaderSegment(segment, f, false)
 }
 
 //CreateCSVSegment - creates a segment from a csv data file. The file must have at least 1000 entries.
@@ -148,11 +153,11 @@ func (c *Client) CreateCSVSegment(segment *UploadingSegment, filename string) er
 		return err
 	}
 	defer closer(f)
-	return c.CreateReaderSegment(segment, f, filename, true)
+	return c.CreateReaderSegment(segment, f, true)
 }
 
 //CreateReaderSegment - creates a segment from a reader. The reader must have at least 1000 entries.
-func (c *Client) CreateReaderSegment(segment *UploadingSegment, reader io.Reader, name string, isCSV bool) error {
+func (c *Client) CreateReaderSegment(segment *UploadingSegment, reader io.Reader, isCSV bool) error {
 	rp, wp := io.Pipe()
 	mpw := multipart.NewWriter(wp)
 	errorChan := make(chan error, 1)
@@ -160,7 +165,7 @@ func (c *Client) CreateReaderSegment(segment *UploadingSegment, reader io.Reader
 		var part io.Writer
 		var err error
 		defer closer(wp)
-		if part, err = mpw.CreateFormFile("file", name); err != nil {
+		if part, err = mpw.CreateFormFile("file", segment.Name); err != nil {
 			errorChan <- err
 			return
 		}
@@ -298,14 +303,14 @@ func (c *Client) createSegment(segment interface{}, URLPath string) error {
 	}{Segment: segment}
 	jsonBody, err := json.Marshal(requestStruct)
 	if err != nil {
-		return nil
+		return err
 	}
 	resp, err := c.Do(&http.Request{
 		Method: http.MethodPost,
 		Body:   ioutil.NopCloser(bytes.NewBuffer(jsonBody)),
 	}, "segments/"+URLPath)
 	if err != nil {
-		return nil
+		return err
 	}
 	defer closer(resp.Body)
 	if err := json.NewDecoder(resp.Body).Decode(&requestStruct); err != nil {
@@ -323,14 +328,14 @@ func (c *Client) UpdateSegment(ID int64, segment interface{}) error {
 		Segment interface{} `json:"segment"`
 		APIError
 	}{Segment: segment}
-	jsonBody, err := json.Marshal(requestStruct.Segment)
+	jsonBody, err := json.Marshal(requestStruct)
 	if err != nil {
-		return nil
+		return err
 	}
 	resp, err := c.Do(&http.Request{
 		Method: http.MethodPut,
 		Body:   ioutil.NopCloser(bytes.NewBuffer(jsonBody)),
-	}, fmt.Sprintf("segments/%d", ID))
+	}, fmt.Sprintf("segment/%d", ID))
 	if err != nil {
 		return err
 	}

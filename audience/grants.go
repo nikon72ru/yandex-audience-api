@@ -41,8 +41,12 @@ func (c *Client) GrantsList(segmentID int64) ([]*Grant, error) {
 
 //CreateGrant - creates permission to manage a segment.
 func (c *Client) CreateGrant(segmentID int64, grant *Grant) error {
+	requestStruct := struct {
+		Grant *Grant `json:"grant"`
+		APIError
+	}{Grant: grant}
 	reqURL, _ := url.Parse(fmt.Sprintf("%s%s/management/segment/%d/grants", apiURL, c.apiVersion, segmentID))
-	jsonBody, _ := json.Marshal(grant)
+	jsonBody, _ := json.Marshal(requestStruct)
 	resp, err := c.Do(&http.Request{
 		Method: http.MethodPut,
 		URL:    reqURL,
@@ -52,14 +56,11 @@ func (c *Client) CreateGrant(segmentID int64, grant *Grant) error {
 		return err
 	}
 	defer closer(resp.Body)
-	var response struct {
-		APIError
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&requestStruct); err != nil {
 		return err
 	}
-	if len(response.Errors) != 0 {
-		return response.Error()
+	if len(requestStruct.Errors) != 0 {
+		return requestStruct.Error()
 	}
 	return nil
 }
@@ -68,7 +69,7 @@ func (c *Client) CreateGrant(segmentID int64, grant *Grant) error {
 func (c *Client) RemoveGrant(segmentID int64, userLogin string) error {
 	resp, err := c.Do(&http.Request{
 		Method: http.MethodDelete,
-	}, fmt.Sprintf("segment/%d/grant/%s", segmentID, userLogin))
+	}, fmt.Sprintf("segment/%d/grant?user_login=%s", segmentID, userLogin))
 	if err != nil {
 		return err
 	}

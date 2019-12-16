@@ -92,9 +92,12 @@ func TestClient_CreatePixel(t *testing.T) {
 			var data = Pixel{Name: "pixelname"}
 			isServerInvoked := false
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				var d Pixel
+				var d struct {
+					Pixel Pixel `json:"pixel"`
+					APIError
+				}
 				_ = json.NewDecoder(r.Body).Decode(&d)
-				c.So(d, ShouldResemble, data)
+				c.So(d.Pixel, ShouldResemble, data)
 				c.So(r.URL.Path, ShouldEndWith, "pixels")
 				isServerInvoked = true
 				_ = json.NewEncoder(w).Encode(struct{}{})
@@ -260,7 +263,7 @@ func TestClient_UndeletePixel(t *testing.T) {
 
 func TestClient_UpdatePixel(t *testing.T) {
 	_ = os.Setenv(tokenVariable, "blah")
-	pixelID := 132
+	pixelID := int64(132)
 	client, err := NewClient(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -270,9 +273,11 @@ func TestClient_UpdatePixel(t *testing.T) {
 			var data = Pixel{ID: pixelID, Name: "pixelname"}
 			isServerInvoked := false
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				var d Pixel
+				var d struct {
+					Pixel Pixel `json:"pixel"`
+				}
 				_ = json.NewDecoder(r.Body).Decode(&d)
-				c.So(d, ShouldResemble, data)
+				c.So(d.Pixel, ShouldResemble, data)
 				c.So(r.URL.Path, ShouldEndWith, fmt.Sprintf("pixel/%d", pixelID))
 				isServerInvoked = true
 				_ = json.NewEncoder(w).Encode(struct{}{})

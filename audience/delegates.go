@@ -41,7 +41,11 @@ func (c *Client) DelegatesList() ([]*Delegate, error) {
 
 //CreateDelegate - adds the user login to the list of representatives for the current account.
 func (c *Client) CreateDelegate(delegate *Delegate) error {
-	jsonBody, _ := json.Marshal(delegate)
+	requestStruct := struct {
+		Delegate *Delegate `json:"delegate"`
+		APIError
+	}{Delegate: delegate}
+	jsonBody, _ := json.Marshal(requestStruct)
 	resp, err := c.Do(&http.Request{
 		Method: http.MethodPut,
 		Body:   ioutil.NopCloser(bytes.NewBuffer(jsonBody)),
@@ -50,14 +54,11 @@ func (c *Client) CreateDelegate(delegate *Delegate) error {
 		return err
 	}
 	defer closer(resp.Body)
-	var response struct {
-		APIError
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&requestStruct); err != nil {
 		return err
 	}
-	if len(response.Errors) != 0 {
-		return response.Error()
+	if len(requestStruct.Errors) != 0 {
+		return requestStruct.Error()
 	}
 	return nil
 }
@@ -66,7 +67,7 @@ func (c *Client) CreateDelegate(delegate *Delegate) error {
 func (c *Client) RemoveDelegate(userLogin string) error {
 	resp, err := c.Do(&http.Request{
 		Method: http.MethodDelete,
-	}, fmt.Sprintf("delegate/%s", userLogin))
+	}, fmt.Sprintf("delegate?user_login=%s", userLogin))
 	if err != nil {
 		return err
 	}

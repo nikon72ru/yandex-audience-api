@@ -86,9 +86,11 @@ func TestClient_CreateDelegate(t *testing.T) {
 			var data = Delegate{UserLogin: "guest", Perm: View, Comment: "1'st comment"}
 			isServerInvoked := false
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				var d Delegate
+				var d struct {
+					Delegate Delegate `json:"delegate"`
+				}
 				_ = json.NewDecoder(r.Body).Decode(&d)
-				c.So(d, ShouldResemble, data)
+				c.So(d.Delegate, ShouldResemble, data)
 				isServerInvoked = true
 				_ = json.NewEncoder(w).Encode(struct{}{})
 			}))
@@ -134,7 +136,7 @@ func TestClient_RemoveDelegate(t *testing.T) {
 			isServerInvoked := false
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				isServerInvoked = true
-				c.So(r.URL.Path, ShouldEndWith, login)
+				c.So(r.URL.String(), ShouldEndWith, login)
 				_ = json.NewEncoder(w).Encode(struct {
 					Success bool `json:"success"`
 				}{true})
@@ -170,7 +172,7 @@ func TestClient_RemoveDelegate(t *testing.T) {
 			isServerInvoked := false
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				isServerInvoked = true
-				c.So(r.URL.Path, ShouldEndWith, login)
+				c.So(r.URL.String(), ShouldEndWith, login)
 				_ = json.NewEncoder(w).Encode(struct {
 					Success bool `json:"success"`
 				}{false})
